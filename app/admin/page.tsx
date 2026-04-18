@@ -8,6 +8,7 @@ import {
   assignDeviceToUser,
   removeDeviceFromUser,
   adminRegisterMitra,
+  logoutUser,
 } from "@/lib/auth-helpers";
 import {
   Shield,
@@ -26,6 +27,7 @@ import {
   CheckCircle,
   AlertTriangle,
   Lock,
+  LogOut,
 } from "lucide-react";
 
 interface MitraUser {
@@ -176,6 +178,16 @@ export default function AdminPage() {
 
   const totalDevices = mitraList.reduce((acc, m) => acc + (m.deviceTokens?.length || 0), 0);
 
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+      router.push("/login");
+    } catch (err) {
+      console.error("Gagal logout:", err);
+      showToast("Gagal logout. Coba lagi.", "error");
+    }
+  };
+
   if (loading || (!user && loading)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -221,6 +233,13 @@ export default function AdminPage() {
             <p className="text-xs text-slate-400">Kelola mitra & perangkat IoT</p>
           </div>
         </div>
+        <button
+          onClick={handleLogout}
+          className="w-10 h-10 rounded-full glass-panel flex items-center justify-center cursor-pointer hover:bg-rose-500/20 transition-colors group"
+          title="Keluar"
+        >
+          <LogOut className="text-slate-400 w-5 h-5 group-hover:text-rose-400 transition-colors" />
+        </button>
       </header>
 
       {/* Stats Cards */}
