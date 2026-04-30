@@ -31,6 +31,10 @@ export default function Home() {
     soilMoisture: 0,
     pumpStatus: false,
     autoMode: false,
+    calibrateSensor: false,
+    clearCache: false,
+    rebootDevice: false,
+    sensorActive: false,
   });
 
   const [isConnected, setIsConnected] = useState(false);
@@ -84,10 +88,14 @@ export default function Home() {
             soilMoisture: data.soilMoisture || 0,
             pumpStatus: data.pumpStatus || false,
             autoMode: data.autoMode || false,
+            calibrateSensor: data.calibrateSensor || false,
+            clearCache: data.clearCache || false,
+            rebootDevice: data.rebootDevice || false,
+            sensorActive: data.sensorActive || false,
           });
           setIsConnected(true);
         } else {
-          const defaultData = { temperature: 0, humidity: 0, soilMoisture: 0, pumpStatus: false, autoMode: false };
+          const defaultData = { temperature: 0, humidity: 0, soilMoisture: 0, pumpStatus: false, autoMode: false, calibrateSensor: false, clearCache: false, rebootDevice: false, sensorActive: false };
           setDoc(deviceRef, defaultData);
           setSensorData(defaultData);
           setIsConnected(true);
@@ -261,7 +269,7 @@ export default function Home() {
           <HomeTab sensorData={sensorData} activeToken={activeToken} handlePumpToggle={handlePumpToggle} handleAutoToggle={handleAutoToggle} userProfile={userProfile} />
         )}
         {currentTab === "stats" && <StatsTab activeToken={activeToken} />}
-        {currentTab === "system" && <SystemTab activeToken={activeToken} userProfile={userProfile} />}
+        {currentTab === "system" && <SystemTab activeToken={activeToken} userProfile={userProfile} sensorData={sensorData} />}
       </main>
 
       {/* FLOATING NAVIGATION BAR */}
@@ -554,12 +562,22 @@ function StatsTab({ activeToken }: { activeToken: string }) {
 // ---------------------------------------------------------
 // TAB: SISTEM (SYSTEM)
 // ---------------------------------------------------------
-function SystemTab({ activeToken, userProfile }: { activeToken: string; userProfile: any }) {
+function SystemTab({ activeToken, userProfile, sensorData }: { activeToken: string; userProfile: any; sensorData: any }) {
   const [toasting, setToasting] = useState("");
 
-  const handleAction = (msg: string) => {
+  const handleAction = async (msg: string, actionKey?: string) => {
     setToasting(msg);
     setTimeout(() => setToasting(""), 3000);
+    
+    if (actionKey && activeToken) {
+      try {
+        const databaseRootAppId = process.env.NEXT_PUBLIC_DATABASE_ROOT_APP_ID || "smart-farm";
+        const deviceRef = doc(db, "artifacts", databaseRootAppId, "public", "data", "devices", activeToken);
+        await setDoc(deviceRef, { [actionKey]: true }, { merge: true });
+      } catch (err) {
+        console.error("Action error:", err);
+      }
+    }
   };
 
   return (
@@ -616,6 +634,16 @@ function SystemTab({ activeToken, userProfile }: { activeToken: string; userProf
               Bagus
             </div>
           </div>
+          <div className="bg-slate-900/50 p-3 rounded-xl border border-slate-800 col-span-2 flex justify-between items-center">
+            <div>
+              <p className="text-xs text-slate-500 mb-1">Status Node Sensor (ESP32-C3)</p>
+              <p className="text-sm font-semibold text-white">Modul Sensor Outdoor</p>
+            </div>
+            <div className={`px-2.5 py-1 text-xs rounded-full border font-medium flex items-center gap-1.5 ${sensorData.sensorActive ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/20" : "bg-rose-500/20 text-rose-400 border-rose-500/20"}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${sensorData.sensorActive ? "bg-emerald-500" : "bg-rose-500"}`}></span>
+              {sensorData.sensorActive ? "Aktif" : "Tidak Aktif"}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -627,7 +655,7 @@ function SystemTab({ activeToken, userProfile }: { activeToken: string; userProf
 
         <div className="space-y-3">
           <button
-            onClick={() => handleAction("Sensor sedang dikalibrasi ulang...")}
+            onClick={() => handleAction("Sensor sedang dikalibrasi ulang...", "calibrateSensor")}
             className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 p-4 rounded-xl flex items-center justify-between transition-colors"
           >
             <div className="flex items-center gap-3">
@@ -643,7 +671,7 @@ function SystemTab({ activeToken, userProfile }: { activeToken: string; userProf
           </button>
 
           <button
-            onClick={() => handleAction("Berhasil membersihkan cache sistem.")}
+            onClick={() => handleAction("Berhasil membersihkan cache sistem.", "clearCache")}
             className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 p-4 rounded-xl flex items-center justify-between transition-colors"
           >
             <div className="flex items-center gap-3">
@@ -659,7 +687,7 @@ function SystemTab({ activeToken, userProfile }: { activeToken: string; userProf
           </button>
 
           <button
-            onClick={() => handleAction("Melakukan proses reboot pada perangkat...")}
+            onClick={() => handleAction("Melakukan proses reboot pada perangkat...", "rebootDevice")}
             className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 border border-rose-900/50 p-4 rounded-xl flex items-center justify-between transition-colors group"
           >
             <div className="flex items-center gap-3">
